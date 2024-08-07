@@ -1,14 +1,19 @@
-import { before, after, describe, test } from "node:test";
+import { after, describe, test } from "node:test";
 import { Miniflare } from "miniflare";
 
 describe("soldev redirects", () => {
-  const mf = new Miniflare({
+  // See https://miniflare.dev/get-started
+  const miniflare = new Miniflare({
     modules: true,
     scriptPath: "cloudflare-worker.js",
   });
 
+  const makeGetRequest = (path) => {
+    return miniflare.dispatchFetch(`http://localhost.app:8787${path}`);
+  };
+
   test("Ironforge redirection works", async () => {
-    const response = await mf.dispatchFetch("http://localhost:8787/");
+    const response = await makeGetRequest("/");
     const responseText = await response.text();
     if (!responseText.includes("<title>Ironforge</title>")) {
       throw new Error("❌ did not redirect properly");
@@ -16,7 +21,7 @@ describe("soldev redirects", () => {
   });
 
   test("Course page redirection works", async () => {
-    const response = await mf.dispatchFetch("http://localhost:8787/course");
+    const response = await makeGetRequest("/course");
     const responseText = await response.text();
     if (!responseText.includes("<title>Developer Courses")) {
       throw new Error("❌ did not redirect properly");
@@ -24,9 +29,7 @@ describe("soldev redirects", () => {
   });
 
   test("Deep link redirection works", async () => {
-    const response = await mf.dispatchFetch(
-      "http://localhost:8787/course/anchor-pdas"
-    );
+    const response = await makeGetRequest("/course/anchor-pdas");
     const responseText = await response.text();
     if (!responseText.includes("<title>Anchor PDAs and Accounts")) {
       throw new Error("❌ did not redirect properly");
@@ -34,8 +37,8 @@ describe("soldev redirects", () => {
   });
 
   test("Even if redirect is unknown, send people to /course", async () => {
-    const response = await mf.dispatchFetch(
-      "http://localhost:8787/course/course-that-does-not-exist-anymore"
+    const response = await makeGetRequest(
+      "/course/course-that-does-not-exist-anymore"
     );
     const responseText = await response.text();
     if (!responseText.includes("<title>Developer Courses")) {
@@ -44,6 +47,6 @@ describe("soldev redirects", () => {
   });
 
   after(async () => {
-    await mf.dispose();
+    await miniflare.dispose();
   });
 });
